@@ -13,3 +13,4 @@ bitsandbytes
 xformers 
 einops
 streamlit
+setuptools==59.8.0

@@ -38,136 +38,42 @@
 #
 # ###########################################################################
 
-import warnings
-warnings.filterwarnings("ignore")
-
-import os
-import textwrap
-
-import langchain
-from langchain.llms import HuggingFacePipeline
-
-import torch
-import transformers
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from transformers import LlamaTokenizer, LlamaForCausalLM, pipeline
-
-
-### Multi-document retriever
-from langchain.vectorstores import Chroma, FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA, VectorDBQA
-from langchain.document_loaders import PyPDFLoader
-from langchain.document_loaders import DirectoryLoader
-from InstructorEmbedding import INSTRUCTOR
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-
 import seaborn as sns
 import streamlit as st
 
+st.title("Old Faithful eruptions")
 
-st.title("ProServGPT")
+geyser = sns.load_dataset("geyser")
 
-##### LLM Code #####
+st.markdown(
+    """
+    This is a tiny app to explore the
+    [Old Faithful Geyser Data](https://www.stat.cmu.edu/~larry/all-of-statistics/=data/faithful.dat).
+    First, we can view some summary statistics.
+    The `duration` variable is the duration of an eruption in minutes,
+    and the `waiting` variable is the time between eruptions in minutes.
+    """
+)
 
-class CFG:
-    model_name = 'falcon' # wizardlm, llama, bloom, falcon
-
-def get_model(model = CFG.model_name):
-    
-    print('\nDownloading model: ', model, '\n\n')
-    
-    if CFG.model_name == 'wizardlm':
-        tokenizer = AutoTokenizer.from_pretrained('TheBloke/wizardLM-7B-HF')
-        
-        model = AutoModelForCausalLM.from_pretrained('TheBloke/wizardLM-7B-HF',
-                                                     load_in_8bit=True,
-                                                     device_map='auto',
-                                                     torch_dtype=torch.float16,
-                                                     low_cpu_mem_usage=True
-                                                    )
-        max_len = 1024
-        task = "text-generation"
-        T = 0
-        
-    elif CFG.model_name == 'llama':
-        tokenizer = AutoTokenizer.from_pretrained("aleksickx/llama-7b-hf")
-        
-        model = AutoModelForCausalLM.from_pretrained("aleksickx/llama-7b-hf",
-                                                     load_in_8bit=True,
-                                                     device_map='auto',
-                                                     torch_dtype=torch.float16,
-                                                     low_cpu_mem_usage=True,
-                                                    )
-        max_len = 1024
-        task = "text-generation"
-        T = 0.1
-
-    elif CFG.model_name == 'bloom':
-        tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom-7b1")
-        
-        model = AutoModelForCausalLM.from_pretrained("bigscience/bloom-7b1",
-                                                     load_in_8bit=True,
-                                                     device_map='auto',
-                                                     torch_dtype=torch.float16,
-                                                     low_cpu_mem_usage=True,
-                                                    )
-        max_len = 1024
-        task = "text-generation"
-        T = 0
-        
-    elif CFG.model_name == 'falcon':
-        tokenizer = AutoTokenizer.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v2")
-        
-        model = AutoModelForCausalLM.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v2",
-                                                     load_in_8bit=True,
-                                                     device_map='auto',
-                                                     torch_dtype=torch.float16,
-                                                     low_cpu_mem_usage=True,
-                                                     trust_remote_code=True
-                                                    )
-        max_len = 1024
-        task = "text-generation"
-        T = 0        
-        
-    else:
-        print("Not implemented model (tokenizer and backbone)")
-        
-    return tokenizer, model, max_len, task, T
+st.write(geyser.describe().T)
 
 
-# tokenizer, model, max_len, task, T = get_model(CFG.model_name)
+"""
+So the mean waiting time between eruptions is around 70 minutes,
+with a mean eruption duration of three and a half minutes.
+Summary statistics can be misleading.
+Let us plot the waiting and duration variables against each other.
 
-st.write(CFG.model_name)
+We'll use a joint density plot, with the marginal densities for each
+variable on the corresponding axis.
+There are clearly two clusters:
+shorter eruptions with a shorter waiting time,
+and longer eruptions with a longer waiting time.
+These are labeled in our data set, so we separate the data and color by cluster.
+"""
 
-##### LLM Code #####
 
-st.header("Update VectorDB")
-st.divider()
-st.markdown('Documents uploaded here will be embedded into the Vector Database and can be referenced by the LLM model below')
-uploaded_files = st.file_uploader("Choose a PDF file", accept_multiple_files=True)
-def save_uploaded_file(uploaded_file, destination_directory, destination_filename):
-    destination_path = os.path.join(destination_directory, destination_filename)
-    
-    with open(destination_path, 'wb') as destination_file:
-        destination_file.write(uploaded_file.read())
-    
-    # Optionally, you can return the destination path if needed
-    return destination_path
-
-for uploaded_file in uploaded_files:
-    save_uploaded_file(uploaded_file, "/home/cdsw/cml/", uploaded_file.name )
-  
-st.empty()
-st.empty()
-st.empty()
-    
-
-st.header("ProServGPT")    
-st.divider()
-with st.chat_message("user"):
-    st.write("Hello 👋")
-        
-prompt = st.chat_input("Say something")
-if prompt:
-    st.write(f"User has sent the following prompt: {prompt}")
+with sns.axes_style("white"):
+    st.pyplot(
+        sns.jointplot(data=geyser, x="waiting", y="duration", hue="kind", kind="kde")
+    )

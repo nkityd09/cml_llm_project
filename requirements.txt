@@ -1,0 +1,15 @@
+pandas
+seaborn
+langchain 
+tiktoken 
+pypdf 
+chromadb==0.3.23 
+faiss-gpu
+transformers 
+InstructorEmbedding 
+sentence_transformers
+accelerate 
+bitsandbytes 
+xformers 
+einops
+streamlit

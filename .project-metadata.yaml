@@ -15,8 +15,8 @@ tasks:
     name: Install Dependencies
     script: cml/install_dependencies.py
     kernel: python3
-    cpu: 1
-    memory: 2
+    cpu: 4
+    memory: 32
 
   - type: start_application
     name: Streamlit App
